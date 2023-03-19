@@ -1,0 +1,11 @@
+datasets
+ipdb>=0.13.11
+librosa
+numpy
+pyaudio
+sounddevice
+soundfile
+torch>=1.4.0
+torchaudio
+torchvision>=0.5.0
+# git+https://github.com/huggingface/transformers
