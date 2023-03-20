@@ -1,4 +1,6 @@
+from diffusers import StableDiffusionPipeline
 import librosa
+from PIL import Image
 import pyaudio
 import threading
 from transformers import SpeechT5Processor, SpeechT5ForSpeechToText
@@ -12,7 +14,7 @@ class StreamParams(NamedTuple):
   frames_per_buffer: int = 1024
   input: bool = True
   output: bool = False
-  input_device_index: int = 2
+  input_device_index: int = 0
 
   def to_dict(self) -> dict:
     return self._asdict()
@@ -53,7 +55,7 @@ class Recorder:
     self._pyaudio.terminate()
 
 if __name__ == "__main__":
-  stream_params = StreamParams().to_dict()
+  stream_params = StreamParams(input_device_index=0).to_dict()
   # recorder = Recorder(stream_params)
   # recorder.record(5, "output.wav")
 
@@ -61,8 +63,14 @@ if __name__ == "__main__":
   processor = SpeechT5Processor.from_pretrained(checkpoint)
   model = SpeechT5ForSpeechToText.from_pretrained(checkpoint)
 
+  pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1")
+  pipe = pipe.to("mps")
+  pipe.enable_attention_slicing()
+
   chunk = 1024
-  output_filename = "output.wav"
+  audio_output_filename = "output.wav"
+  image_output_filename = "output.jpg"
+  image_output_format = "JPEG"
   audio = pyaudio.PyAudio()
   stream = audio.open(**stream_params)
   is_recording = True
@@ -93,17 +101,24 @@ if __name__ == "__main__":
 
   audio.terminate()
 
-  with wave.open(output_filename, 'wb') as wf:
+  with wave.open(audio_output_filename, 'wb') as wf:
     wf.setnchannels(stream_params.get('channels'))
     wf.setsampwidth(audio.get_sample_size(stream_params.get('format')))
     wf.setframerate(stream_params.get('rate'))
     wf.writeframes(b''.join(frames))
 
-  waveform, sample_rate = librosa.load(output_filename)
+  waveform, sample_rate = librosa.load(audio_output_filename)
   inputs = processor(audio=waveform, sampling_rate=16000, return_tensors="pt")
   predicted_ids = model.generate(**inputs, max_length=400)
   transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-  print(f"{transcription[0]}")
+  print(f"Got prompt: {transcription[0]}")
+
+  prompt = transcription[0]
+  _ = pipe(prompt, num_inference_steps=1)
+  image = pipe(prompt).images[0]
+
+  print(f"Got Image...")
+  image.save(image_output_filename, format=image_output_format)
 
 # =====================
 
