@@ -6,6 +6,7 @@ import threading
 from transformers import SpeechT5Processor, SpeechT5ForSpeechToText
 from typing import NamedTuple
 import wave
+import whisper
 
 class StreamParams(NamedTuple):
   format: int = pyaudio.paInt16
@@ -55,13 +56,9 @@ class Recorder:
     self._pyaudio.terminate()
 
 if __name__ == "__main__":
-  stream_params = StreamParams(input_device_index=0).to_dict()
-  # recorder = Recorder(stream_params)
-  # recorder.record(5, "output.wav")
+  stream_params = StreamParams(input_device_index=2).to_dict()
 
-  checkpoint = "microsoft/speecht5_asr"
-  processor = SpeechT5Processor.from_pretrained(checkpoint)
-  model = SpeechT5ForSpeechToText.from_pretrained(checkpoint)
+  model = whisper.load_model("base")
 
   pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1")
   pipe = pipe.to("mps")
@@ -107,13 +104,10 @@ if __name__ == "__main__":
     wf.setframerate(stream_params.get('rate'))
     wf.writeframes(b''.join(frames))
 
-  waveform, sample_rate = librosa.load(audio_output_filename)
-  inputs = processor(audio=waveform, sampling_rate=16000, return_tensors="pt")
-  predicted_ids = model.generate(**inputs, max_length=400)
-  transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
-  print(f"Got prompt: {transcription[0]}")
+  result = model.transcribe(audio_output_filename)
+  prompt = result['text']
+  print(f"Got prompt: {prompt}")
 
-  prompt = transcription[0]
   _ = pipe(prompt, num_inference_steps=1)
   image = pipe(prompt).images[0]
 
@@ -184,3 +178,27 @@ if __name__ == "__main__":
 
 # transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)
 # print(transcription[0])
+
+# - was most recently the 1st employee at a leading crypto wallet and helped scale the company / engineering organization to 80 people.
+# - built a web-based poker client during the covid lockdowns that still runs ~100/tables day.
+# - started a successful dev shop as my first job out of college
+
+# I used to make coding tutorials on Youtube https://www.youtube.com/@DecypherMedia/videos -- and write on Medium https://medium.com/@alwaysbcoding
+
+# probably the multi-chain notification system I built for Phantom. It was the first backend service we deployed and it created the framework for how all backend services were built going forward.
+
+# most of my last few years are locked behind private repos -- but you can look at this project I made recently to build an AI engine to play competitive 2v2 pokemon https://github.com/AlwaysBCoding/poketools
+
+# ---
+
+# https://www.linkedin.com/in/alwaysbcoding/
+
+# https://github.com/alwaysbcoding
+
+# https://www.youtube.com/@DecypherMedia/videos
+
+# 1. I want to work on AI full time and be around other people who feel the same way. I've done my best work in my career when I'm part of a scene where I'm working with other ambitious, intelligent and passionate developers.
+
+# 2. I think I'm very good at living at the intersection of new technology and the human users of the emergent products it enables. I can both understand the tech at a deep level, and understand how most people outside of the engineering world want to interact with it and derive value from it, and that's something that will be valuable for the AI renaissance.
+
+# I've spent the last 10 years working as a Software Engineer, and am interested in engineering roles as well, but I also think that I could be a great product manager and have been considering making the switch. I've always been a more product-oriented engineer and think I would thrive in a PM role for a more technical product that requires tight communication with engineering teams.

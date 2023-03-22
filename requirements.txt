@@ -3,7 +3,9 @@ diffusers
 ipdb>=0.13.11
 librosa
 numpy
+openai-whisper
 pyaudio
+setuptools-rust
 sounddevice
 soundfile
 torch>=1.4.0
